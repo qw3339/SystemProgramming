@@ -33,13 +33,16 @@ public:
 		return fuei_level;
 
 	}
-	Tank(int volume):VOLUME(volume)
+	Tank(int volume):VOLUME(
+		volume<MIN_TANK_VOLUME? MIN_TANK_VOLUME: 
+		volume>MAX_TANK_VOLUME? MAX_TANK_VOLUME:
+		volume)
 	{
-		if (volume < MIN_TANK_VOLUME)volume = MIN_TANK_VOLUME;
-		if (volume < MAX_TANK_VOLUME)volume = MAX_TANK_VOLUME;
+		//if (volume < MIN_TANK_VOLUME)volume = MIN_TANK_VOLUME;
+		//if (volume < MAX_TANK_VOLUME)volume = MAX_TANK_VOLUME;
 		/*this->VOLUME = volume;*/
 		this->fuei_level = 0;
-		cout << "Tank is r" << this << endl;
+		cout << "Tank is r " << this << endl;
 
 	}
 
@@ -58,8 +61,16 @@ public:
 void main()
 {
 	setlocale(LC_ALL, " ");
-	Tank tank(-50);
-	tank.info();
+	Tank tank(85);
+	int fuel;
+	do
+	{
+		cout << " "; cin >> fuel;
+		tank.fill(fuel);
+		tank.info();
+	} while (fuel>0);
+
+	
 
 }
  
