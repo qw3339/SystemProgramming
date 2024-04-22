@@ -1,6 +1,12 @@
 #include<iostream>
 #include<conio.h>
+#include <thread>
+#include <Windows.h>
 using namespace std;
+using namespace std::chrono_literals;
+
+#define Enter 13
+#define Escape 27
 #define MIN_TANK_VOLUME 20
 #define MAX_TANK_VOLUME 20120
 
@@ -128,6 +134,13 @@ class Car
 	Engine engine;
 	Tank tank;
 	bool driver_inside;
+	struct Threads
+	{
+		std::thread panel_thread;
+		std::thread engine_idle_thread;
+	}threads;
+
+
 public:
 	Car(int consumption = 10, int volume = 60) :engine(consumption), tank(volume), driver_inside(false)
 	{
@@ -143,13 +156,32 @@ public:
 	void get_in()
 	{
 		driver_inside = true;
-		panel();
+		threads.panel_thread = std::thread(&Car::panel, this);
 
 	}
 	void get_out()
 	{
+		system("CLS");
 		driver_inside = false;
+		if(threads.panel_thread.joinable())threads.panel_thread.join();
+		
 		cout << "Out of the car " << endl;
+	}
+
+	void start()
+	{
+		if (tank.get_fuei_level())
+		{
+			engine.start();
+			threads.engine_idle_thread = std::thread(&Car::engine_idel, this);
+		}
+	}
+
+	void stop()
+	{
+		engine.stop();
+		if (threads.engine_idle_thread.joinable())threads.engine_idle_thread.join();
+
 	}
 
 	void control()
@@ -160,12 +192,33 @@ public:
 			key = _getch();
 			switch (key)
 			{
-			case 13: driver_inside ? get_out() : get_in(); break;
-				
+			case 'F':
+			case'f':
+				if (driver_inside)
+				{
+					cout << "Get out of the car\a " << endl;
+				}
+				else
+				{
+					double fuel;
+					cout << "¬ведите уровень топлива: "; cin >> fuel;
+					tank.fill(fuel);
+				}
+				break;
+			case Enter: driver_inside ? get_out() : get_in(); break;
+			case'I':
+			case'i': engine.started() ? stop() : start(); break;
+			case Escape:
+				stop();
+				get_out();  break;				
 			}
-
 		} while (key != 27);
+	}
 
+	void engine_idel()
+	{
+		while (engine.started() && tank.give_fuel(engine.get_consumption_per_second()))
+			this_thread::sleep_for(1s);
 
 	}
 
@@ -175,9 +228,18 @@ public:
 		while (driver_inside)
 		{
 			system("CLS");
-			cout << "Fuel level: \t" << tank.get_fuei_level() << " liters.\n";
+			cout << "Fuel level: \t" << tank.get_fuei_level() << " liters.\t";
+			if (tank.get_fuei_level() < 5)
+			{
+				HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+				SetConsoleTextAttribute(hConsole, 0xCF);
+				cout << " LOW FUEL ";
+				SetConsoleTextAttribute(hConsole, 0x07);
+			}
+			cout << endl;
+			
 			cout << "Engine is " << (engine.started() ? "started" : "stopped") << endl;
-
+			std::this_thread::sleep_for(2s);
 		}
 
 	}
