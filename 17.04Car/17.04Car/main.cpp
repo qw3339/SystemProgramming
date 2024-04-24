@@ -145,7 +145,7 @@ class Car
 	}threads;
 	int speed;
 	const int MAX_SPEED;
-	int acceleration;
+	const int ACCELERATION;
 
 public:
 	Car(int consumption = 10, int volume = 60, int max_speed = 250) :
@@ -153,7 +153,7 @@ public:
 		tank(volume), 
 		driver_inside(false),
 		speed(0),
-		acceleration(MAX_SPEED/20),
+		ACCELERATION(MAX_SPEED/20),
 		MAX_SPEED
 		(
 			max_speed < MAX_SPEED_LOW_LIMIT ? MAX_SPEED_LOW_LIMIT :
@@ -206,10 +206,11 @@ public:
 	{
 		if (engine.started())
 		{
-			speed += acceleration;
+			speed += ACCELERATION;
 			if (speed > MAX_SPEED)speed = MAX_SPEED;
 			if (!threads.free_wheeling_thread.joinable())
 				threads.free_wheeling_thread = std::thread(&Car::free_wheeling, this);
+			//if (speed > MAX_SPEED)speed = MAX_SPEED;
 			std::this_thread::sleep_for(1s);
 		}
 		
@@ -218,21 +219,24 @@ public:
 
 	void slow_down()
 	{
-		speed -= acceleration;
+		speed -= ACCELERATION;
 		if (speed < 0)speed = 0;
-		if (threads.free_wheeling_thread.joinable())
+		if (speed == 0 && threads.free_wheeling_thread.joinable())
 			threads.free_wheeling_thread.join();
+		std::this_thread::sleep_for(1s);
+
+
 	}
 	void control()
 	{
 		char key;
 		do
 		{
-			key = _getch();
+			key = 0;
+			if(_kbhit())key = _getch();
 			switch (key)
 			{
-			case 'F':
-			case'f':
+			case 'F': case'f':
 				if (driver_inside)
 				{
 					cout << "Get out of the car\a " << endl;
@@ -240,7 +244,11 @@ public:
 				else
 				{
 					double fuel;
-					cout << "¬ведите уровень топлива: "; cin >> fuel;
+					cout << "¬ведите уровень топлива: "; 
+					//cin.ignore();
+					//cin.clear();
+					////cin.ignore();
+					cin >> fuel;
 					tank.fill(fuel);
 				}
 				break;
@@ -249,19 +257,25 @@ public:
 			case'W': case'w': accelerate();  break;
 			case'S': case's': slow_down(); break;
 			case Escape:
+				speed = 0;
 				stop();
 				get_out();  break;				
 			}
+			if (tank.get_fuei_level() == 0)stop();
+			if (speed < 0)speed = 0;
+			if (speed == 0 && threads.free_wheeling_thread.joinable())
+				threads.free_wheeling_thread.join();
+
 		} while (key != 27);
 	}
 
 	void free_wheeling()
 	{
-		while (--speed)
+		while (speed--)
 		{
-			std::this_thread::sleep_for(1s);
+			//speed--;
 			if (speed < 0)speed = 0;
-
+			std::this_thread::sleep_for(1s);			
 
 		}
 	}
@@ -279,6 +293,9 @@ public:
 		while (driver_inside)
 		{
 			system("CLS");
+			for (int i = 0; i < speed / 3; i++)cout << "|"; cout << endl;
+			cout << "Speed: " << speed << "km/h\n";
+			cout << "Engine is " << (engine.started() ? "started" : "stopped") << endl;
 			cout << "Fuel level: \t" << tank.get_fuei_level() << " liters.\t";
 			if (tank.get_fuei_level() < 5)
 			{
@@ -289,8 +306,8 @@ public:
 			}
 			cout << endl;
 			
-			cout << "Engine is " << (engine.started() ? "started" : "stopped") << endl;
-			cout << "Speed: " << speed << "km/h\n";
+			
+			
 			std::this_thread::sleep_for(1s);
 		}
 
@@ -299,7 +316,8 @@ public:
 	{
 		engine.info();
 		tank.info();
-
+		//cout << "Current speed:" << speed << "Km\n";
+		//cout << "Max speed:" << speed << "Km\n";
 	}
 };
 
@@ -309,7 +327,7 @@ public:
 
 void main()
 {
-	setlocale(LC_ALL, " ");
+	setlocale(LC_ALL, "Russian");
 #if defined TANK_CHECK
 	//если определено танк чекЅ ниже следующей код до дерективы endif будет виден компел€тору.
 	Tank tank(85);
